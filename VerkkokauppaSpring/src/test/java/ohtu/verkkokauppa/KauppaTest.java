@@ -103,4 +103,94 @@ public class KauppaTest {
         verify(pankki).tilisiirto("kekka", 42, "54321", "33333-44455", 5);
     }
     
+    @Test
+    public void uudenAsiointiSessionAloitusNollaaTiedot() {
+        Pankki pankki = mock(Pankki.class);
+    
+        Viitegeneraattori viite = mock(Viitegeneraattori.class);
+        when(viite.uusi()).thenReturn(42).thenReturn(43);
+        
+        Varasto varasto = mock(Varasto.class);
+        when(varasto.saldo(1)).thenReturn(10);
+        when(varasto.saldo(2)).thenReturn(100);
+        when(varasto.haeTuote(1)).thenReturn(new Tuote(1, "maito", 5));
+        when(varasto.haeTuote(2)).thenReturn(new Tuote(2, "pepsi", 7));
+        
+        Kauppa k = new Kauppa(varasto, pankki, viite); 
+        
+        k.aloitaAsiointi();
+        k.lisaaKoriin(1); 
+        k.lisaaKoriin(2); 
+        
+        k.tilimaksu("keijo", "67890");
+        
+        verify(pankki).tilisiirto("keijo", 42, "67890", "33333-44455", 12);
+        verify(viite, times(1)).uusi();
+        
+        k.aloitaAsiointi();
+        k.lisaaKoriin(1);
+        
+        k.tilimaksu("kekka", "54321");
+        
+        verify(pankki).tilisiirto("kekka", 43, "54321", "33333-44455", 5);
+        verify(viite, times(2)).uusi();
+    }
+    
+    @Test
+    public void ostaminenPyytaaAinaUudenViitteen() {
+        Pankki pankki = mock(Pankki.class);
+    
+        Viitegeneraattori viite = mock(Viitegeneraattori.class);
+        when(viite.uusi()).thenReturn(42).thenReturn(43).thenReturn(44);
+        
+        Varasto varasto = mock(Varasto.class);
+        when(varasto.saldo(1)).thenReturn(10);       
+        when(varasto.haeTuote(1)).thenReturn(new Tuote(1, "maito", 5));      
+        
+        Kauppa k = new Kauppa(varasto, pankki, viite); 
+        
+        k.aloitaAsiointi();
+        k.lisaaKoriin(1); 
+        
+        k.tilimaksu("keijo", "67890");
+
+        verify(viite, times(1)).uusi();
+        
+        k.aloitaAsiointi();
+        k.lisaaKoriin(1);
+        
+        k.tilimaksu("kekka", "54321");
+        
+        verify(pankki).tilisiirto("kekka", 43, "54321", "33333-44455", 5);
+        verify(viite, times(2)).uusi();
+        
+        k.aloitaAsiointi();
+        k.lisaaKoriin(1); 
+        
+        k.tilimaksu("keijo", "67890");
+
+        verify(viite, times(3)).uusi();
+    }
+    
+    @Test
+    public void tuotteenPoistoOstoskoristaPalauttaaSenVarastoon() {
+        Pankki pankki = mock(Pankki.class);
+    
+        Viitegeneraattori viite = mock(Viitegeneraattori.class);
+        when(viite.uusi()).thenReturn(42);
+        
+        Varasto varasto = mock(Varasto.class);
+        when(varasto.saldo(1)).thenReturn(10);
+        when(varasto.haeTuote(1)).thenReturn(new Tuote(1, "maito", 5));
+        
+        Kauppa k = new Kauppa(varasto, pankki, viite); 
+        
+        k.aloitaAsiointi();
+        k.lisaaKoriin(1); 
+        
+        k.poistaKorista(1);
+        
+        verify(varasto, times(1)).palautaVarastoon(any());
+    }
+    
 }
